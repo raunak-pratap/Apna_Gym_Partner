@@ -1,14 +1,10 @@
 import sys
 from pathlib import Path
-import mediapipe as mp
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent  # Points to Main_App directory
-MODEL_PATH = str(BASE_DIR / "ml_models" / "pose_landmarker_full.task")
-
-# Pass absolute path to MediaPipe
-base_options = mp.tasks.BaseOptions(
-    model_asset_path=MODEL_PATH
-)
+# Force Python to recognize Main_App as the root package directory
+BASE_DIR = Path(__file__).resolve().parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
 import os
 import time
