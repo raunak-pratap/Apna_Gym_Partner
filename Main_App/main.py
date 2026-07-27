@@ -1,10 +1,13 @@
 import sys
 from pathlib import Path
 
-# Add Main_App directory to Python path to fix 'KeyError: services.coaching.llm'
-BASE_DIR = Path(__file__).resolve().parent
-if str(BASE_DIR) not in sys.path:
-    sys.path.insert(0, str(BASE_DIR))
+BASE_DIR = Path(__file__).resolve().parent.parent.parent  # Points to Main_App directory
+MODEL_PATH = str(BASE_DIR / "ml_models" / "pose_landmarker_full.task")
+
+# Pass absolute path to MediaPipe
+base_options = mp.tasks.BaseOptions(
+    model_asset_path=MODEL_PATH
+)
 
 import os
 import time
