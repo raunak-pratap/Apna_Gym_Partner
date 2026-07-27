@@ -1,11 +1,12 @@
 import sys
 from pathlib import Path
 
-# Force Python to recognize Main_App as the root package directory
+# 1. Force Python to look inside Main_App for modules/packages
 BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+# 2. Standard library & third-party imports
 import os
 import time
 import pandas as pd
@@ -13,6 +14,7 @@ import streamlit as st
 from groq import Groq
 from streamlit_webrtc import WebRtcMode, RTCConfiguration, webrtc_streamer
 
+# 3. Project-specific imports
 from services.auth.login_wall import render_login_wall
 from services.coaching.llm import LLMCoach
 from services.coaching.tts import TextToSpeech
