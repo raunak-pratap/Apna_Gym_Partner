@@ -1,64 +1,37 @@
-import sys
-from pathlib import Path
-
-# 1. Force Python to look inside Main_App for modules/packages
-BASE_DIR = Path(__file__).resolve().parent
-if str(BASE_DIR) not in sys.path:
-    sys.path.insert(0, str(BASE_DIR))
-
-# 2. Standard library & third-party imports
+import streamlit as st
 import os
 import time
 import pandas as pd
-import streamlit as st
-from groq import Groq
-from streamlit_webrtc import WebRtcMode, RTCConfiguration, webrtc_streamer
-
-# 3. Project-specific imports
 from services.auth.login_wall import render_login_wall
+from services.state.session_defaults import initial_session_defaults
+from services.config.workout_config import EXERCISE_OPTIONS
+from services.ui.style_loader import load_css, inject_local_font, inject_webrtc_styles
+from services.persistence.exercise_repository import init_db
+from streamlit_webrtc import webrtc_streamer, WebRtcMode
+from services.vision.exercise_video_processor import VideoProcessorClass
+from services.tracking.metrics import sync_metrics_update
+from services.persistence.exercise_repository import get_users_exercises
+from groq import Groq
 from services.coaching.llm import LLMCoach
 from services.coaching.tts import TextToSpeech
 from services.coaching.voice_pipeline import VoicePipeline, autoplay_audio
-from services.config.workout_config import EXERCISE_OPTIONS
-from services.persistence.exercise_repository import get_users_exercises, init_db
-from services.state.session_defaults import initial_session_defaults
-from services.tracking.metrics import sync_metrics_update
-from services.ui.style_loader import inject_local_font, inject_webrtc_styles, load_css
-from services.vision.exercise_video_processor import VideoProcessorClass
 
-# WebRTC ICE STUN Server Configuration
-RTC_CONFIG = RTCConfiguration(
-    {
-        "iceServers": [
-            {"urls": ["stun:stun.l.google.com:19302"]},
-            {"urls": ["stun:stun1.l.google.com:19302"]},
-            {"urls": ["stun:stun2.l.google.com:19302"]},
-        ]
-    }
-)
-
-
+  
 def main():
     st.set_page_config(
         page_icon="🏋️‍♀️",
         page_title="AI Real-time GYM Coach",
         initial_sidebar_state="expanded",
-        layout="centered",
+        layout="centered"
     )
 
-    # Load static assets relative to Main_App directory
-    css_path = BASE_DIR / "static" / "style.css"
-    font_path = BASE_DIR / "static" / "AdobeClean.otf"
-
-    if css_path.exists():
-        load_css(str(css_path))
-    if font_path.exists():
-        inject_local_font(str(font_path), "AdobeClean")
+    load_css(os.path.join(os.getcwd(), "static", "style.css"))
+    inject_local_font(os.path.join(os.getcwd(), "static", "AdobeClean.otf"), "AdobeClean")
 
     init_db()
 
     if not render_login_wall():
-        return
+        return 
 
     initial_session_defaults()
 
@@ -68,20 +41,20 @@ def main():
 
             if not api_key and hasattr(st, "secrets") and "GROQ_API_KEY" in st.secrets:
                 api_key = st.secrets["GROQ_API_KEY"]
-
+            
             groq_client = Groq(api_key=api_key)
             llm_coach = LLMCoach(groq_client)
             tts = TextToSpeech()
             st.session_state.voice_pipeline = VoicePipeline(llm_coach, tts)
-        except Exception:
+        except Exception as e:
             st.session_state.voice_pipeline = None
 
     workout_started = st.session_state.get("workout_started", False)
-
+    
     with st.sidebar:
         st.title("🏋️‍♂️ Apna AI Coach")
 
-        if st.session_state.get("username"):
+        if st.session_state.username:
             st.caption(f"👤 Login as {st.session_state.username}")
 
         st.divider()
@@ -97,7 +70,7 @@ def main():
 
             st.markdown("")
 
-            start_session_button = st.button("Start Workout", use_container_width=True, key="start_session_button")
+            start_session_button = st.button("Start Workout", width="stretch", key="start_session_button")
 
             if start_session_button:
                 st.session_state.exercise_type = plan_exercise
@@ -112,9 +85,9 @@ def main():
                     result = st.session_state.voice_pipeline.process_event(
                         event="workout_started",
                         exercise=plan_exercise,
-                        metrics={},
+                        metrics={}
                     )
-
+                    
                     if result:
                         st.session_state.audio_to_play, st.session_state.coach_feedback = result
 
@@ -128,16 +101,16 @@ def main():
 
             st.info(f"**{exercise}** -- {sets} Sets / {reps} Reps")
 
-            end_session_button = st.button("End Workout", key="end_session_button", use_container_width=True)
+            end_session_button = st.button("End Workout", key="end_session_button", width="stretch")
 
             if end_session_button:
                 st.session_state.workout_started = False
-
+                
                 if st.session_state.voice_pipeline:
                     result = st.session_state.voice_pipeline.process_event(
                         event="workout_completed",
                         exercise=exercise,
-                        metrics={},
+                        metrics={}
                     )
                     if result:
                         st.session_state.audio_to_play, st.session_state.coach_feedback = result
@@ -148,11 +121,11 @@ def main():
             st.divider()
 
             exercise = st.session_state.get("exercise_type")
-            total_reps = st.session_state.get("reps", 0)
-            current_set_reps = st.session_state.get("current_set_reps", 0)
-            reps_per_set = st.session_state.get("reps_per_set", 0)
-            sets_completed = st.session_state.get("sets_completed", 0)
-            target_sets = st.session_state.get("target_sets", 0)
+            total_reps = st.session_state.get("reps")
+            current_set_reps = st.session_state.get("current_set_reps")
+            reps_per_set = st.session_state.get("reps_per_set")
+            sets_completed = st.session_state.get("sets_completed")
+            target_sets = st.session_state.get("target_sets")
 
             st.subheader("Progress")
 
@@ -164,37 +137,37 @@ def main():
 
             if exercise == "Squats":
                 st.subheader("Squat Metrics")
-                st.metric("Knee Angle", f"{st.session_state.get('knee_angle', 0)}°")
-                st.metric("Back Angle", f"{st.session_state.get('back_angle', 0)}°")
-                st.metric("Depth Status", st.session_state.get("depth_status", "-"))
+                st.metric("Knee Angle", f"{st.session_state.knee_angle}°")
+                st.metric("Back Angle", f"{st.session_state.back_angle}°")
+                st.metric("Depth Status", st.session_state.depth_status)
 
             elif exercise == "Push-ups":
                 st.subheader("Push-up Metrics")
-                st.metric("Elbow Angle", f"{st.session_state.get('elbow_angle', 0)}°")
-                st.metric("Body Alignment", st.session_state.get("body_alignment", "-"))
-                st.metric("Hip Position", st.session_state.get("hip_status", "-"))
+                st.metric("Elbow Angle", f"{st.session_state.elbow_angle}°")
+                st.metric("Body Alignment", st.session_state.body_alignment)
+                st.metric("Hip Position", st.session_state.hip_status)
 
             elif exercise == "Biceps Curls (Dumbbell)":
                 st.subheader("Curl Metrics")
-                st.metric("Elbow Angle", f"{st.session_state.get('elbow_angle', 0)}°")
-                st.metric("Shoulder Stability", st.session_state.get("shoulder_status", "-"))
-                st.metric("Swing Detection", st.session_state.get("swing_status", "-"))
+                st.metric("Elbow Angle", f"{st.session_state.elbow_angle}°")
+                st.metric("Shoulder Stability", st.session_state.shoulder_status)
+                st.metric("Swing Detection", st.session_state.swing_status)
 
             elif exercise == "Shoulder Press":
                 st.subheader("Shoulder Press Metrics")
-                st.metric("Elbow Angle", f"{st.session_state.get('elbow_angle', 0)}°")
-                st.metric("Arm Extension", st.session_state.get("extension_status", "-"))
-                st.metric("Back Arch", st.session_state.get("back_arch_status", "-"))
+                st.metric("Elbow Angle", f"{st.session_state.elbow_angle}°")
+                st.metric("Arm Extension", st.session_state.extension_status)
+                st.metric("Back Arch", st.session_state.back_arch_status)
 
             elif exercise == "Lunges":
                 st.subheader("Lunge Metrics")
-                st.metric("Front Knee Angle", f"{st.session_state.get('front_knee_angle', 0)}°")
-                st.metric("Torso Angle", f"{st.session_state.get('torso_angle', 0)}°")
-                st.metric("Balance Status", st.session_state.get("balance_status", "-"))
+                st.metric("Front Knee Angle", f"{st.session_state.front_knee_angle}°")
+                st.metric("Torso Angle", f"{st.session_state.torso_angle}°")
+                st.metric("Balance Status", st.session_state.balance_status)
 
     st.title("AI Real-time GYM Coach")
     st.markdown("#### Real-time pose detection with proactive AI voice coaching")
-
+ 
     if st.session_state.get("audio_to_play"):
         autoplay_audio(st.session_state.audio_to_play)
 
@@ -206,8 +179,8 @@ def main():
         st.markdown(
             """
             <div style="
-                border: 2px dashed #444;
-                border-radius: 8px;
+                border: 10px dashed #444;
+                border-radius: 0px;
                 padding: 48px 32px;
                 text-align: center;
                 color: #888;
@@ -228,9 +201,12 @@ def main():
             key="exercise-analysis",
             mode=WebRtcMode.SENDRECV,
             video_processor_factory=VideoProcessorClass,
-            rtc_configuration=RTC_CONFIG,
-            media_stream_constraints={"video": True, "audio": False},
-            async_processing=True,
+            rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+            media_stream_constraints={
+                "video": True,
+                "audio": False
+            },
+            async_processing=True
         )
 
         sync_metrics_update(context)
@@ -252,11 +228,11 @@ def main():
 
         arr = [
             {
-                "Exercise": row["exercise_name"],
-                "Reps": row["reps"],
-                "Sets": row["sets"],
-                "Time (sec)": row["time"],
-                "Date": row["created_at"],
+                "Exercise": row['exercise_name'],
+                "Reps": row['reps'],
+                "Sets": row['sets'],
+                "Time (sec)": row['time'],
+                "Date": row['created_at']
             }
             for row in history_rows
         ]
@@ -265,13 +241,13 @@ def main():
 
         if not df.empty:
             df["Date"] = pd.to_datetime(df["Date"]).dt.date
-            agg_df = (
-                df.groupby(["Exercise", "Date"])
-                .agg({"Reps": "sum", "Sets": "sum", "Time (sec)": "sum"})
-                .reset_index()
-            )
+            agg_df = df.groupby(["Exercise", "Date"]).agg({
+                "Reps": 'sum',
+                "Sets": "sum",
+                "Time (sec)": "sum"
+            }).reset_index()
             agg_df.index += 1
-            st.table(agg_df)
+            st.table(agg_df, border="horizontal")
         else:
             st.info("No workout history found.")
 
