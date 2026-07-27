@@ -1,4 +1,4 @@
-libg11
+libgl1
 libglib2.0-0t64
-libsm6
+1ibsm6
 1ibxext6

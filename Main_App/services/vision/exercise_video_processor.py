@@ -21,17 +21,8 @@ class VideoProcessorClass(VideoProcessorBase):
         self._latest_metrics = None
         self._exercise_type = "Squats"
 
-        from pathlib import Path
-
-        BASE_DIR = Path(__file__).resolve().parents[2]
-        MODEL_PATH = BASE_DIR / "ml_models" / "pose_landmarker_full.task"
-
-        print(f"Model path: {MODEL_PATH}")
-        print(f"Exists: {MODEL_PATH.exists()}")
-
-        base_option = python.BaseOptions(
-            model_asset_path=str(MODEL_PATH)
-        )
+        model_path = os.path.join(os.getcwd(), "ml_models", "pose_landmarker_full.task")
+        base_option = python.BaseOptions(model_asset_path=model_path)
 
         options = vision.PoseLandmarkerOptions(
             base_options=base_option,
