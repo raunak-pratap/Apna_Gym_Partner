@@ -30,7 +30,9 @@ class VideoProcessorClass(VideoProcessorBase):
             raise FileNotFoundError(
                 f"Pose model not found: {model_path}"
             )
-        base_option = python.BaseOptions(model_asset_path=model_path)
+        base_option = python.BaseOptions(
+                model_asset_path=str(model_path)
+            )
 
         options = vision.PoseLandmarkerOptions(
             base_options=base_option,
