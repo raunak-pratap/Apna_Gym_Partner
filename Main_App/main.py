@@ -1,4 +1,5 @@
 import streamlit as st
+from pathlib import Path
 import os
 import time
 import pandas as pd
@@ -16,6 +17,8 @@ from services.coaching.llm import LLMCoach
 from services.coaching.tts import TextToSpeech
 from services.coaching.voice_pipeline import VoicePipeline, autoplay_audio
 
+BASE_DIR = Path(__file__).resolve().parent
+
   
 def main():
     st.set_page_config(
@@ -25,8 +28,12 @@ def main():
         layout="centered"
     )
 
-    load_css(os.path.join(os.getcwd(), "static", "style.css"))
-    inject_local_font(os.path.join(os.getcwd(), "static", "AdobeClean.otf"), "AdobeClean")
+    load_css(BASE_DIR / "static" / "style.css")
+
+    inject_local_font(
+        BASE_DIR / "static" / "AdobeClean.otf",
+        "AdobeClean"
+    )
 
     init_db()
 
@@ -42,12 +49,21 @@ def main():
             if not api_key and hasattr(st, "secrets") and "GROQ_API_KEY" in st.secrets:
                 api_key = st.secrets["GROQ_API_KEY"]
             
-            groq_client = Groq(api_key=api_key)
-            llm_coach = LLMCoach(groq_client)
-            tts = TextToSpeech()
-            st.session_state.voice_pipeline = VoicePipeline(llm_coach, tts)
+            if not api_key:
+                st.warning("GROQ_API_KEY is not configured.")
+                st.session_state.voice_pipeline = None
+            else:
+                groq_client = Groq(api_key=api_key)
+                llm_coach = LLMCoach(groq_client)
+                tts = TextToSpeech()
+                st.session_state.voice_pipeline = VoicePipeline(
+                    llm_coach,
+                    tts
+                )
+           
         except Exception as e:
-            st.session_state.voice_pipeline = None
+          st.error(f"Voice pipeline initialization failed: {e}")
+          st.session_state.voice_pipeline = None
 
     workout_started = st.session_state.get("workout_started", False)
     
@@ -201,7 +217,16 @@ def main():
             key="exercise-analysis",
             mode=WebRtcMode.SENDRECV,
             video_processor_factory=VideoProcessorClass,
-            rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+            rtc_configuration={
+                "iceServers":[
+                    {
+                        "urls":[
+                            "stun:stun.l.google.com:19302",
+                            "stun:stun1.l.google.com:19302"
+                        ]
+                    }
+                ]
+            },
             media_stream_constraints={
                 "video": True,
                 "audio": False
@@ -209,11 +234,10 @@ def main():
             async_processing=True
         )
 
-        sync_metrics_update(context)
+        
 
         if context.state.playing:
-            time.sleep(0.25)
-            st.rerun()
+             sync_metrics_update(context)
 
         inject_webrtc_styles()
 
