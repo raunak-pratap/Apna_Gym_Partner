@@ -41,12 +41,13 @@ def inject_local_font(font_path, font_name):
 
 def inject_webrtc_styles():
     font_path = STATIC_DIR / "AdobeClean.otf"
-    
-    if not font_path.exists(font_path):
+
+    if not font_path.exists():
         return
 
     with font_path.open("rb") as font_file:
         encoded_font = base64.b64encode(font_file.read()).decode()
+
 try:
     components.html(
         f"""
