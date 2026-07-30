@@ -1,23 +1,30 @@
-import os
+from pathlib import Path
 import streamlit as st
 import streamlit.components.v1 as components
 import base64
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+STATIC_DIR = BASE_DIR / "static"
  
 
 def load_css(file_path):
-    if os.path.exists(file_path):
-        with open(file_path) as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    file_path = Path(file_path)
+
+    if file_path.exists():
+     with file_path.open(encoding="utf-8") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
 def inject_local_font(font_path, font_name):
-    if not os.path.exists(font_path):
+    font_path = Path(font_path)
+
+    if not font_path.exists():
         return
     
-    with open(font_path, "rb") as f:
+    with font_path.open("rb") as f:
         encoded = base64.b64encode(f.read()).decode()
 
-    ext = os.path.splitext(font_path)[1].lstrip(".")
+    ext = font_path.suffix.lstrip(".")
     fmt = {"otf": "opentype"}.get(ext, ext)
     mime = {"otf": "font/otf"}.get(ext, f"font/{ext}")
 
@@ -33,14 +40,14 @@ def inject_local_font(font_path, font_name):
     """, unsafe_allow_html=True)
 
 def inject_webrtc_styles():
-    font_path = os.path.join(os.getcwd(), "static", "AdobeClean.otf")
+    font_path = STATIC_DIR / "AdobeClean.otf"
     
-    if not os.path.exists(font_path):
+    if not font_path.exists(font_path):
         return
 
-    with open(font_path, "rb") as font_file:
+    with font_path.open("rb") as font_file:
         encoded_font = base64.b64encode(font_file.read()).decode()
-
+try:
     components.html(
         f"""
         <script>
@@ -94,3 +101,5 @@ def inject_webrtc_styles():
         """,
         height=0,
     )
+except Exception as e:
+    st.warning(f"Unable to inject WebRTC styles: {e}")
